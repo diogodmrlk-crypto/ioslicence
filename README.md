@@ -12,7 +12,7 @@ npm start
 # http://localhost:10000/health
 ```
 
-O banco local padrão fica em `data/iosprivate.sqlite`; em produção o código usa `/var/data/iosprivate.sqlite` mesmo se `SQLITE_PATH` não estiver presente, evitando cair acidentalmente em um arquivo efêmero durante um deploy. O primeiro administrador é configurado exclusivamente por variáveis de ambiente. Não existe credencial padrão segura embutida no código.
+O banco local padrão fica em `data/iosprivate.sqlite`; em produção o código usa `/var/data/iosprivate.sqlite` mesmo se `SQLITE_PATH` não estiver presente. A aplicação compara o dispositivo do sistema de arquivos e interrompe a inicialização se o Persistent Disk não estiver realmente montado, evitando perder keys silenciosamente em um deploy. O primeiro administrador é configurado exclusivamente por variáveis de ambiente. Não existe credencial padrão segura embutida no código.
 
 ## Publicar no GitHub
 
