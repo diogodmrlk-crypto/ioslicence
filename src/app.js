@@ -19,6 +19,7 @@ if (process.env.NODE_ENV !== 'test' && jwtSecret.length < 32) throw new Error('J
 const adminUsername = process.env.ADMIN_USERNAME || 'admin';
 const adminPassword = process.env.ADMIN_PASSWORD || '';
 const adminHash = adminPassword ? bcrypt.hashSync(adminPassword, 12) : '';
+const keysViewCode = process.env.KEYS_VIEW_CODE || '20009';
 
 app.disable('x-powered-by');
 if (process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
@@ -44,6 +45,14 @@ function isExpired(row) { return row.expires_at !== null && Date.parse(row.expir
 function auth(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   try { req.admin = jwt.verify(token, jwtSecret); next(); } catch { return json(res, 401, { error: 'Autenticação necessária.' }); }
+}
+function keysViewAuth(req, res, next) {
+  const token = (req.headers['x-keys-view-token'] || '').trim();
+  try {
+    const payload = jwt.verify(token, jwtSecret);
+    if (payload.scope !== 'keys:view') throw new Error('invalid scope');
+    next();
+  } catch { return json(res, 403, { error: 'Desbloqueie a visualização das keys primeiro.' }); }
 }
 const typeSchema = z.object({ type: z.enum(TYPES), duration: z.number().int().min(1).max(8760).optional(), username: z.string().trim().max(120).optional().default('') });
 const deviceSchema = z.object({ key: z.string().trim().min(1).max(200), device: z.string().trim().min(1).max(255) });
@@ -103,7 +112,11 @@ app.post('/admin/auth/login', (req, res) => {
   if (!adminHash || username !== adminUsername || typeof password !== 'string' || !bcrypt.compareSync(password, adminHash)) return json(res, 401, { error: 'Credenciais inválidas.' });
   return json(res, 200, { token: jwt.sign({ sub: adminUsername, role: 'admin' }, jwtSecret, { expiresIn: '12h' }) });
 });
-app.get('/admin/keys', auth, (req, res) => {
+app.post('/admin/keys/unlock', auth, (req, res) => {
+  if (typeof req.body?.code !== 'string' || req.body.code !== keysViewCode) return json(res, 403, { unlocked: false, error: 'Código inválido.' });
+  return json(res, 200, { unlocked: true, token: jwt.sign({ sub: req.admin.sub, scope: 'keys:view' }, jwtSecret, { expiresIn: '15m' }) });
+});
+app.get('/admin/keys', auth, keysViewAuth, (req, res) => {
   const { search = '', status = '', username = '', page = '1', limit = '50' } = req.query;
   const p = Math.max(1, Number(page) || 1), l = Math.min(100, Math.max(1, Number(limit) || 50)), params = [];
   const where = [];
@@ -123,7 +136,7 @@ app.post('/admin/keys', auth, (req, res) => {
     return json(res, 201, { license: publicLicense(db.prepare('SELECT * FROM licenses WHERE id=?').get(result.lastInsertRowid)) });
   } catch (e) { return json(res, 400, { error: e.message }); }
 });
-app.get('/admin/keys/:id', auth, (req, res) => { const row = db.prepare('SELECT * FROM licenses WHERE id=?').get(Number(req.params.id)); return row ? json(res, 200, { license: publicLicense(row) }) : json(res, 404, { error: 'Licença não encontrada.' }); });
+app.get('/admin/keys/:id', auth, keysViewAuth, (req, res) => { const row = db.prepare('SELECT * FROM licenses WHERE id=?').get(Number(req.params.id)); return row ? json(res, 200, { license: publicLicense(row) }) : json(res, 404, { error: 'Licença não encontrada.' }); });
 app.patch('/admin/keys/:id/status', auth, (req, res) => { const status = z.enum(['active','blocked','revoked']).safeParse(req.body?.status); if (!status.success) return json(res, 400, { error: 'status inválido.' }); const r = db.prepare('UPDATE licenses SET status=?, updated_at=? WHERE id=?').run(status.data, now(), Number(req.params.id)); return r.changes ? json(res, 200, { license: publicLicense(db.prepare('SELECT * FROM licenses WHERE id=?').get(Number(req.params.id))) }) : json(res, 404, { error: 'Licença não encontrada.' }); });
 app.post('/admin/keys/:id/unbind', auth, (req, res) => { const r = db.prepare('UPDATE licenses SET used=0, device=NULL, updated_at=? WHERE id=?').run(now(), Number(req.params.id)); return r.changes ? json(res, 200, { success: true }) : json(res, 404, { error: 'Licença não encontrada.' }); });
 app.delete('/admin/keys/:id', auth, (req, res) => { const r = db.prepare('DELETE FROM licenses WHERE id=?').run(Number(req.params.id)); return r.changes ? json(res, 204, null) : json(res, 404, { error: 'Licença não encontrada.' }); });

@@ -12,7 +12,7 @@ npm start
 # http://localhost:10000/health
 ```
 
-O banco local padrão fica em `data/iosprivate.sqlite`; em produção use sempre `/var/data/iosprivate.sqlite`. O primeiro administrador é configurado exclusivamente por variáveis de ambiente. Não existe credencial padrão segura embutida no código.
+O banco local padrão fica em `data/iosprivate.sqlite`; em produção o código usa `/var/data/iosprivate.sqlite` mesmo se `SQLITE_PATH` não estiver presente, evitando cair acidentalmente em um arquivo efêmero durante um deploy. O primeiro administrador é configurado exclusivamente por variáveis de ambiente. Não existe credencial padrão segura embutida no código.
 
 ## Publicar no GitHub
 
@@ -32,7 +32,7 @@ O `render.yaml` declara um Web Service Node no plano `starter` (necessário para
 1. No Render, escolha **New > Blueprint** e conecte o repositório GitHub; ou crie um Web Service apontando para este repositório.
 2. Confirme o nome `iosprivate-api`, plano pago compatível com Persistent Disk e a região desejada.
 3. Se não usar Blueprint, configure Build Command `npm ci`, Start Command `npm start`, Health Check Path `/health` e adicione um Persistent Disk montado em `/var/data`.
-4. Em Environment, configure `ADMIN_USERNAME`, `ADMIN_PASSWORD` e um `JWT_SECRET` aleatório forte. `SQLITE_PATH=/var/data/iosprivate.sqlite` não deve ser alterado. `CORS_ORIGIN` pode ser ajustado para a origem do seu site; use `*` somente quando necessário.
+4. Em Environment, configure `ADMIN_USERNAME`, `ADMIN_PASSWORD`, um `JWT_SECRET` aleatório forte e `KEYS_VIEW_CODE=20009` (ou outro código que você escolher). `SQLITE_PATH=/var/data/iosprivate.sqlite` não deve ser alterado. `CORS_ORIGIN` pode ser ajustado para a origem do seu site; use `*` somente quando necessário.
 5. Faça o primeiro deploy. A URL será fornecida pelo Render como `https://<nome-do-servico>.onrender.com`; não há URL fixa neste repositório até que o serviço seja criado.
 6. Teste: `curl https://<seu-servico>.onrender.com/health`.
 
@@ -52,6 +52,8 @@ curl -X POST https://SEU-DOMINIO.onrender.com/v1/session \
   -d '{"device":"pwa-device-id"}'
 ```
 
+No projeto cliente, execute essa chamada ao abrir a tela. Se retornar `authenticated: true`, abra diretamente o dashboard e guarde `access_token`; não peça a key nem chame `/v1/bind` novamente. Use `/v1/bind` somente no primeiro cadastro de uma instalação ainda sem vínculo. O HTML enviado anteriormente ainda chama `/v1/bind` em `activate()` e por isso continua mostrando o login; ele precisa trocar essa chamada por `/v1/session` para obter o comportamento automático.
+
 Importante: em navegador, PWA e Scriptable, um HWID é apenas um identificador fornecido pelo cliente e pode ser copiado ou falsificado. Para operações realmente sensíveis, combine a sessão com autenticação própria do seu projeto e não trate o HWID como prova criptográfica de identidade física.
 
 Exemplo:
@@ -67,6 +69,8 @@ Clientes HTML/JavaScript, PWA, Node.js, Scriptable e outros clientes HTTP devem 
 ## Painel e endpoints administrativos
 
 Abra `https://SEU-DOMINIO.onrender.com/`, entre com `ADMIN_USERNAME`/`ADMIN_PASSWORD` e gere, pesquise, bloqueie, reative, desvincule ou exclua licenças. O painel usa a API real, sem dados fictícios.
+
+O painel começa em inglês e possui as abas **Home**, **Keys** e **Profile**. A aba **Profile** oferece English, Vietnamese e Português PT. A aba **Keys** não carrega o arquivo de licenças antes do desbloqueio: informe o código configurado em `KEYS_VIEW_CODE` (por padrão `20009`). O servidor valida o código e entrega um token temporário de visualização por 15 minutos; um bloqueio apenas no navegador não é usado como proteção.
 
 Endpoints protegidos por `Authorization: Bearer <token>`: `GET /admin/keys`, `POST /admin/keys`, `GET /admin/keys/:id`, `PATCH /admin/keys/:id/status`, `POST /admin/keys/:id/unbind`, `DELETE /admin/keys/:id`, `GET /admin/stats`. O login é `POST /admin/auth/login`.
 

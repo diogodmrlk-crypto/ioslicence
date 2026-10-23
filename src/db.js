@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const Database = require('better-sqlite3');
 
-function openDatabase(filename = process.env.SQLITE_PATH || path.join(process.cwd(), 'data', 'iosprivate.sqlite')) {
+function openDatabase(filename = process.env.SQLITE_PATH || (process.env.NODE_ENV === 'production' ? '/var/data/iosprivate.sqlite' : path.join(process.cwd(), 'data', 'iosprivate.sqlite'))) {
   if (filename !== ':memory:') fs.mkdirSync(path.dirname(filename), { recursive: true });
   const db = new Database(filename);
   db.pragma('journal_mode = WAL');

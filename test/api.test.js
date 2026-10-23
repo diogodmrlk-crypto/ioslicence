@@ -12,14 +12,18 @@ const request = require('supertest');
 const { app, db } = require('../src/app');
 const { openDatabase } = require('../src/db');
 
-let token, key, id;
-const auth = () => ({ Authorization: `Bearer ${token}` });
+let token, keysViewToken, key, id;
+const auth = () => ({ Authorization: `Bearer ${token}`, ...(keysViewToken ? { 'X-Keys-View-Token': keysViewToken } : {}) });
 const login = () => request(app).post('/admin/auth/login').send({ username: 'admin', password: 'test-password-strong' });
 
 test('health e autenticação', async () => {
   assert.equal((await request(app).get('/health')).status, 200);
   assert.equal((await login()).status, 200);
   token = (await login()).body.token;
+  const wrong = await request(app).post('/admin/keys/unlock').set(auth()).send({ code: '00000' });
+  assert.equal(wrong.status, 403);
+  const unlocked = await request(app).post('/admin/keys/unlock').set(auth()).send({ code: '20009' });
+  assert.equal(unlocked.status, 200); keysViewToken = unlocked.body.token;
 });
 
 test('cria key e lista', async () => {
