@@ -40,6 +40,16 @@ test('bind concorrente permite somente um dispositivo', async () => {
   assert.ok(['device-a', 'device-b'].includes(winner));
 });
 
+test('sessão automática exige HWID vinculado e retorna token de cliente', async () => {
+  const device = db.prepare('SELECT device FROM licenses WHERE id=?').get(id).device;
+  const success = await request(app).post('/v1/session').send({ device });
+  assert.equal(success.status, 200);
+  assert.equal(success.body.authenticated, true);
+  assert.ok(success.body.access_token);
+  assert.equal((await request(app).post('/v1/session').send({ device: 'unknown-device' })).status, 401);
+  assert.equal((await request(app).post('/v1/session').send({ device: '' })).status, 400);
+});
+
 test('valida, desvincula, bloqueia e reativa', async () => {
   const device = db.prepare('SELECT device FROM licenses WHERE id=?').get(id).device;
   assert.equal((await request(app).post('/v1/validate').send({ key, device })).body.valid, true);

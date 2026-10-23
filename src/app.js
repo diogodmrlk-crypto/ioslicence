@@ -62,6 +62,21 @@ app.post('/v1/validate', (req, res) => {
   db.prepare('UPDATE licenses SET last_online_at=?, updated_at=? WHERE id=?').run(now(), now(), row.id);
   return json(res, 200, { valid: true, license: publicLicense({ ...row, last_online_at: now() }) });
 });
+function automaticSession(req, res) {
+  const parsed = z.object({ device: z.string().trim().min(1).max(255) }).safeParse(req.body);
+  if (!parsed.success) return json(res, 400, { authenticated: false, reason: 'device_required' });
+  const rows = db.prepare("SELECT * FROM licenses WHERE device=? AND status='active' ORDER BY id DESC").all(parsed.data.device);
+  const valid = rows.filter(row => !isExpired(row));
+  if (!valid.length) return json(res, 401, { authenticated: false, reason: 'no_active_bound_license' });
+  if (valid.length > 1) return json(res, 409, { authenticated: false, reason: 'multiple_bound_licenses' });
+  const row = valid[0];
+  const timestamp = now();
+  db.prepare('UPDATE licenses SET last_online_at=?, updated_at=? WHERE id=?').run(timestamp, timestamp, row.id);
+  const accessToken = jwt.sign({ sub: `license:${row.id}`, license_id: row.id, device: row.device, scope: 'client' }, jwtSecret, { expiresIn: '1h' });
+  return json(res, 200, { authenticated: true, access_token: accessToken, expires_in: 3600, license: publicLicense({ ...row, last_online_at: timestamp }) });
+}
+app.post('/v1/session', automaticSession);
+app.post('/v1/auto-login', automaticSession);
 app.post('/v1/bind', (req, res) => {
   const parsed = deviceSchema.safeParse(req.body); if (!parsed.success) return json(res, 400, { error: 'key e device são obrigatórios.' });
   const tx = db.transaction(() => {

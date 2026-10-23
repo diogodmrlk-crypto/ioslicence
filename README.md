@@ -42,6 +42,18 @@ A inicialização usa migrações idempotentes e nunca apaga o banco. Em atualiz
 
 `POST /v1/bind`, `POST /v1/validate` e `POST /v1/unbind` recebem `{ "key": "...", "device": "identificador-do-cliente" }`. O identificador é compatível com navegador/PWA, mas não é um HWID físico inviolável e pode ser falsificado; o servidor não confia em estado enviado pelo cliente.
 
+Para permitir que outro projeto faça entrada automática sem pedir a key novamente, use `POST /v1/session` (ou o alias `POST /v1/auto-login`) com apenas `{ "device": "identificador-do-cliente" }`. O servidor só retorna `authenticated: true` e um token de cliente de 1 hora quando encontra exatamente uma licença existente, ativa, não expirada e já vinculada àquele dispositivo. Se a key não existir, estiver bloqueada/expirada, não estiver vinculada ou houver mais de uma licença no mesmo dispositivo, a entrada é recusada. O token retornado deve ser usado como `Authorization: Bearer <access_token>` pelo projeto cliente; ele não é um token administrativo.
+
+Exemplo de entrada automática:
+
+```bash
+curl -X POST https://SEU-DOMINIO.onrender.com/v1/session \
+  -H 'Content-Type: application/json' \
+  -d '{"device":"pwa-device-id"}'
+```
+
+Importante: em navegador, PWA e Scriptable, um HWID é apenas um identificador fornecido pelo cliente e pode ser copiado ou falsificado. Para operações realmente sensíveis, combine a sessão com autenticação própria do seu projeto e não trate o HWID como prova criptográfica de identidade física.
+
 Exemplo:
 
 ```bash
