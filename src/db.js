@@ -5,9 +5,8 @@ const Database = require('better-sqlite3');
 function openDatabase(filename = process.env.SQLITE_PATH || (process.env.NODE_ENV === 'production' ? '/var/data/iosprivate.sqlite' : path.join(process.cwd(), 'data', 'iosprivate.sqlite'))) {
   if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_PERSISTENT_DISK !== 'false') {
     if (!filename.startsWith('/var/data/')) throw new Error('Produção exige SQLITE_PATH em /var/data.');
-    const rootDevice = fs.statSync('/').dev;
-    const dataDevice = fs.statSync('/var/data').dev;
-    if (rootDevice === dataDevice) throw new Error('Persistent Disk não está montado em /var/data; aplicação interrompida para proteger as keys.');
+    const mounted = fs.existsSync('/proc/self/mountinfo') && fs.readFileSync('/proc/self/mountinfo', 'utf8').split('\n').some(line => line.split(' ')[4] === '/var/data');
+    if (!mounted) throw new Error('Persistent Disk/volume não está montado em /var/data; aplicação interrompida para proteger as keys.');
   }
   if (filename !== ':memory:') fs.mkdirSync(path.dirname(filename), { recursive: true });
   const db = new Database(filename);

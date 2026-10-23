@@ -38,6 +38,38 @@ O `render.yaml` declara um Web Service Node no plano `starter` (necessário para
 
 A inicialização usa migrações idempotentes e nunca apaga o banco. Em atualizações, mantenha o mesmo Persistent Disk e não use scripts que removam `/var/data`.
 
+## Servidor próprio/VPS com SQLite persistente
+
+Para não depender do filesystem do Render, use um VPS Ubuntu com disco persistente e Docker. O arquivo `compose.yaml` monta o diretório do host `/var/lib/iosprivate` dentro do container como `/var/data`; commits e recriações do container não removem esse diretório.
+
+No servidor:
+
+```bash
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin git
+sudo systemctl enable --now docker
+sudo mkdir -p /var/lib/iosprivate
+sudo chown -R "$USER":"$USER" /var/lib/iosprivate
+git clone https://github.com/diogodmrlk-crypto/ioslicence.git
+cd ioslicence
+cp .env.server.example .env.server
+openssl rand -base64 48
+nano .env.server
+docker compose up -d --build
+docker compose ps
+curl http://127.0.0.1:10000/health
+```
+
+Em `.env.server`, defina `ADMIN_PASSWORD`, cole um `JWT_SECRET` novo e ajuste `CORS_ORIGIN`. O banco ficará no host em `/var/lib/iosprivate/iosprivate.sqlite`, não dentro da camada descartável do container. Atualizações devem ser feitas com `git pull && docker compose up -d --build`; não use `docker compose down -v`, porque isso pode remover volumes nomeados. O volume deste projeto é um bind mount e fica fora do repositório.
+
+Para backup no próprio VPS:
+
+```bash
+mkdir -p /var/backups/iosprivate
+docker compose exec -T iosprivate-api node scripts/backup.js /var/backups/iosprivate
+```
+
+O VPS ainda precisa de backup em outro local para proteção contra falha do disco. Para HTTPS, coloque um proxy reverso como Caddy ou Nginx na frente e não exponha a porta 10000 diretamente à internet. A API foi preparada para reconhecer o volume Docker montado em `/var/data` e recusar a inicialização se o volume não estiver montado.
+
 ## API pública
 
 `POST /v1/bind`, `POST /v1/validate` e `POST /v1/unbind` recebem `{ "key": "...", "device": "identificador-do-cliente" }`. O identificador é compatível com navegador/PWA, mas não é um HWID físico inviolável e pode ser falsificado; o servidor não confia em estado enviado pelo cliente.
