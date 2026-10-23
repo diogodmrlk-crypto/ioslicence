@@ -1,1 +1,48 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>IOSPRIVATE Keys</title><link rel="stylesheet" href="/styles.css"></head><body><main class="shell"><section id="login" class="card login"><h1>IOSPRIVATE <span>Keys</span></h1><p>Controle de acessos</p><form id="loginForm"><input id="username" placeholder="Usuário" autocomplete="username" required><input id="password" type="password" placeholder="Senha" autocomplete="current-password" required><button>Entrar</button><div id="loginMsg" class="msg"></div></form></section><section id="app" hidden><header><div><h1>IOSPRIVATE <span>Keys</span></h1><p>Controle de acessos</p></div><button id="logout" class="ghost">Sair</button></header><div id="stats" class="stats"></div><section class="toolbar"><input id="search" placeholder="Pesquisar por key ou usuário"><select id="filter"><option value="">Todos os status</option><option value="active">Ativas</option><option value="blocked">Bloqueadas</option><option value="revoked">Revogadas</option></select><button id="newKey">+ Criar key</button></section><div id="create" class="card create" hidden><h2>Nova licença</h2><form id="createForm"><input id="newUser" placeholder="Nome do usuário"><select id="newType"><option value="hourly">Por hora</option><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="monthly">Mensal (30 dias)</option><option value="perm">Permanente</option></select><input id="duration" type="number" min="1" value="1" placeholder="Duração"><button>Gerar key</button><button type="button" id="cancel" class="ghost">Cancelar</button></form><pre id="generated"></pre></div><div id="msg" class="msg"></div><div class="tableWrap"><table><thead><tr><th>Key</th><th>Usuário</th><th>Status</th><th>Dispositivo</th><th>Expira em</th><th>Ações</th></tr></thead><tbody id="rows"></tbody></table></div></section></main><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#087df5">
+  <title>IOSPRIVATE | Key manager</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section id="login" class="loginScreen">
+      <div class="loginBrand"><div class="brandMark">K</div><span>Key manager</span></div>
+      <div class="loginCard">
+        <div class="eyebrow">IOSPRIVATE ACCESS</div>
+        <h1>Entre na sua conta</h1>
+        <p>Gerencie licenças, dispositivos e validade em um só lugar.</p>
+        <form id="loginForm">
+          <label>Usuário<input id="username" placeholder="Seu usuário" autocomplete="username" required></label>
+          <label>Senha<input id="password" type="password" placeholder="Sua senha" autocomplete="current-password" required></label>
+          <button class="primary wide">Entrar <span>→</span></button>
+          <div id="loginMsg" class="msg"></div>
+        </form>
+      </div>
+      <small class="loginFoot">IOSPRIVATE · Controle de acessos</small>
+    </section>
+
+    <section id="app" hidden>
+      <header class="topbar">
+        <div class="brand"><div class="brandMark">K</div><div><strong>Key manager</strong><small>IOSPRIVATE</small></div></div>
+        <button id="logout" class="iconButton" aria-label="Sair">↪</button>
+      </header>
+      <div class="pageHeading"><div><h1>Olá, administrador</h1><p>Veja e gerencie suas licenças.</p></div><button id="newKey" class="addButton" aria-label="Criar key">＋</button></div>
+      <div id="stats" class="stats"></div>
+      <section class="insight card"><div class="insightIcon">✓</div><div><strong>Seu painel está protegido</strong><p>As keys ficam salvas no armazenamento persistente.</p></div></section>
+      <section class="keysSection">
+        <div class="sectionTitle"><div><h2>Suas keys</h2><span id="resultLabel">Todas as licenças</span></div><button id="newKeyText" class="linkButton">＋ Nova key</button></div>
+        <div class="filters"><div class="search"><span>⌕</span><input id="search" placeholder="Buscar key ou usuário"></div><select id="filter"><option value="">Todos</option><option value="active">Ativas</option><option value="blocked">Bloqueadas</option><option value="revoked">Revogadas</option></select></div>
+        <div id="msg" class="msg"></div>
+        <div id="rows" class="keyList"></div>
+      </section>
+      <nav class="bottomNav"><button class="selected"><span>⌂</span>Início</button><button onclick="document.getElementById('search').focus()"><span>⌕</span>Buscar</button><button id="newKeyBottom"><span>＋</span>Criar</button><button onclick="document.getElementById('logout').click()"><span>↪</span>Sair</button></nav>
+      <div id="create" class="modalBackdrop" hidden><div class="modal card"><button id="cancel" class="close">×</button><div class="eyebrow">NOVA LICENÇA</div><h2>Criar uma key</h2><p>Defina o tipo e a validade da licença.</p><form id="createForm"><label>Nome do usuário<input id="newUser" placeholder="Ex.: João Silva"></label><label>Tipo<select id="newType"><option value="hourly">Por hora</option><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="monthly">Mensal (30 dias)</option><option value="perm">Permanente</option></select></label><label>Duração<input id="duration" type="number" min="1" value="1"></label><button class="primary wide">Gerar key <span>→</span></button></form><pre id="generated"></pre></div></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
